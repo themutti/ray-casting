@@ -7,38 +7,27 @@
 
 #define SCR_WIDTH 120
 #define SCR_HEIGHT 48
-#define WORLD_WIDTH 8
-#define WORLD_HEIGHT 8
+#define WORLD_WIDTH 12
+#define WORLD_HEIGHT 12
 #define CUBE_SIZE 64
 #define FOV 60
 #define P_HEIGHT 32
 
 enum WorldCube { VOID, WALL };
 const enum WorldCube world[WORLD_HEIGHT][WORLD_WIDTH] = {
-  {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL}
+  {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL}
 };
-
-void clear_projection(char projection[SCR_WIDTH*SCR_HEIGHT]) {
-  for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
-    projection[i] = '#';
-  }
-}
-
-void display_projection(const char projection[SCR_WIDTH*SCR_HEIGHT]) {
-  for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
-    putchar(projection[i]);
-    if ((i+1) % SCR_WIDTH == 0) {
-      putchar('\n');
-    }
-  }
-}
 
 double degToRad(double angle) {
   return angle * M_PI / 180.0;
@@ -106,13 +95,44 @@ double rayCast(int x, int y, double angle) {
   return hor_distance < ver_distance ? hor_distance : ver_distance;
 }
 
-int main() {
-  int px = 256, py = 256;
-  double p_angle = 60;
-  
-  // char projection[SCR_WIDTH*SCR_HEIGHT];
-  // clear_projection(projection);
-  // display_projection(projection);
+void clearProjection(char projection[SCR_WIDTH*SCR_HEIGHT]) {
+  for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
+    projection[i] = ' ';
+  }
+}
 
+void displayProjection(const char projection[SCR_WIDTH*SCR_HEIGHT]) {
+  for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
+    putchar(projection[i]);
+    if ((i+1) % SCR_WIDTH == 0) {
+      putchar('\n');
+    }
+  }
+}
+
+void draw(char projection[SCR_WIDTH*SCR_HEIGHT], int px, int py, double p_angle) {
+  double dist_to_projection = (SCR_WIDTH/2) / tan(degToRad(FOV/2));
+  double ray_angle_add = (double)FOV / (double)SCR_WIDTH;
+  double ray_angle = p_angle - FOV/2;
+  for (int x = SCR_WIDTH-1; x >= 0; x--) {
+    double distance = rayCast(px, py, ray_angle) * cos(degToRad(ray_angle - p_angle));
+    int height = round(CUBE_SIZE * dist_to_projection / distance);
+    if (height > SCR_HEIGHT) {
+      height = SCR_HEIGHT;
+    }
+    for (int i = 0; i < height/2; i++) {
+      projection[SCR_WIDTH*(SCR_HEIGHT/2 + i) + x] = projection[SCR_WIDTH*(SCR_HEIGHT/2 - i) + x] = '#';
+    }
+    ray_angle += ray_angle_add;
+  }
+}
+
+int main() {
+  int px = 150, py = 350;
+  double p_angle = 30;
+  char projection[SCR_WIDTH*SCR_HEIGHT];
+  clearProjection(projection);
+  draw(projection, px, py, p_angle);
+  displayProjection(projection);
   return 0;
 }
