@@ -33,8 +33,15 @@ double degToRad(double angle) {
   return angle * M_PI / 180.0;
 }
 
+// returns the angle in the range between 0 and 359
+double fixAngleRange(double angle) {
+  if (angle < 0) angle = 360 + fmod(angle, 360);
+  if (angle >= 360) angle = fmod(angle, 360);
+  return angle;
+}
+
 double horizontalRayCast(int x, int y, double angle) {
-  double rads = degToRad(angle); 
+  double rads = degToRad(fixAngleRange(angle)); 
   int is_facing_up = angle < 180;
 
   int intersect_y = (int)(y / CUBE_SIZE) * CUBE_SIZE + (is_facing_up ? -1 : CUBE_SIZE);
@@ -61,7 +68,7 @@ double horizontalRayCast(int x, int y, double angle) {
 }
 
 double verticalRayCast(int x, int y, double angle) {
-  double rads = degToRad(angle);
+  double rads = degToRad(fixAngleRange(angle));
   int is_facing_right = angle < 90 || angle >= 270;
 
   int intersect_x = (int)(x / CUBE_SIZE) * CUBE_SIZE + (is_facing_right ? CUBE_SIZE : -1);
@@ -123,7 +130,7 @@ void draw(char projection[SCR_WIDTH*SCR_HEIGHT], int px, int py, double p_angle)
     for (int i = 0; i < height/2; i++) {
       projection[SCR_WIDTH*(SCR_HEIGHT/2 + i) + x] = projection[SCR_WIDTH*(SCR_HEIGHT/2 - i) + x] = '#';
     }
-    ray_angle += ray_angle_add;
+    ray_angle = fixAngleRange(ray_angle + ray_angle_add);
   }
 }
 
