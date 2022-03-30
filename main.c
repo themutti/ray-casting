@@ -11,7 +11,10 @@
 #define WORLD_HEIGHT 12
 #define CUBE_SIZE 64
 #define FOV 60
-#define P_HEIGHT 32
+#define P_HEIGHT 30
+#define WALL_CHAR '#'
+#define FLOOR_CHAR '\''
+#define CEILING_CHAR '-'
 
 enum WorldCube { VOID, WALL };
 const enum WorldCube world[WORLD_HEIGHT][WORLD_WIDTH] = {
@@ -102,13 +105,13 @@ double rayCast(int x, int y, double angle) {
   return hor_distance < ver_distance ? hor_distance : ver_distance;
 }
 
-void clearProjection(char projection[SCR_WIDTH*SCR_HEIGHT]) {
+void clearProjection(char projection[SCR_WIDTH*SCR_HEIGHT+1]) {
   for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
     projection[i] = ' ';
   }
 }
 
-void displayProjection(const char projection[SCR_WIDTH*SCR_HEIGHT]) {
+void displayProjection(const char projection[SCR_WIDTH*SCR_HEIGHT+1]) {
   for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
     putchar(projection[i]);
     if ((i+1) % SCR_WIDTH == 0) {
@@ -117,7 +120,7 @@ void displayProjection(const char projection[SCR_WIDTH*SCR_HEIGHT]) {
   }
 }
 
-void draw(char projection[SCR_WIDTH*SCR_HEIGHT], int px, int py, double p_angle) {
+void draw(char projection[SCR_WIDTH*SCR_HEIGHT+1], int px, int py, double p_angle) {
   double dist_to_projection = (SCR_WIDTH/2) / tan(degToRad(FOV/2));
   double ray_angle_add = (double)FOV / (double)SCR_WIDTH;
   double ray_angle = p_angle - FOV/2;
@@ -127,8 +130,20 @@ void draw(char projection[SCR_WIDTH*SCR_HEIGHT], int px, int py, double p_angle)
     if (height > SCR_HEIGHT) {
       height = SCR_HEIGHT;
     }
-    for (int i = 0; i < height/2; i++) {
-      projection[SCR_WIDTH*(SCR_HEIGHT/2 + i) + x] = projection[SCR_WIDTH*(SCR_HEIGHT/2 - i) + x] = '#';
+    for (int i = 0; i < SCR_HEIGHT/2; i++) {
+      int wall_center_y = SCR_HEIGHT / ((double)CUBE_SIZE / (double)P_HEIGHT);
+      int i_top = SCR_WIDTH*(wall_center_y - i - 1) + x;  // top half projection index
+      int i_bottom = SCR_WIDTH*(wall_center_y + i) + x;  // bottom half projection index
+      if (i_top >= 0) {
+        projection[i_top] = i < height/2 ? WALL_CHAR : CEILING_CHAR;
+      } else {
+        projection[i_top + SCR_HEIGHT*SCR_WIDTH] = FLOOR_CHAR;
+      }
+      if (i_bottom < SCR_HEIGHT*SCR_WIDTH) {
+        projection[i_bottom] = i < height/2 ? WALL_CHAR : FLOOR_CHAR;
+      } else {
+        projection[i_bottom - SCR_HEIGHT*SCR_WIDTH] = CEILING_CHAR;
+      }
     }
     ray_angle = fixAngleRange(ray_angle + ray_angle_add);
   }
@@ -137,7 +152,7 @@ void draw(char projection[SCR_WIDTH*SCR_HEIGHT], int px, int py, double p_angle)
 int main() {
   int px = 150, py = 350;
   double p_angle = 30;
-  char projection[SCR_WIDTH*SCR_HEIGHT];
+  char projection[SCR_WIDTH*SCR_HEIGHT+1];
   clearProjection(projection);
   draw(projection, px, py, p_angle);
   displayProjection(projection);
