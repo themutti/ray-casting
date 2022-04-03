@@ -18,25 +18,27 @@
 #define WORLD_WIDTH 12
 #define WORLD_HEIGHT 12
 #define CUBE_SIZE 64
-#define FOV 60
-#define P_HEIGHT 28
 #define WALL_CHAR '#'
 #define FLOOR_CHAR '\''
 #define CEILING_CHAR '-'
+#define FOV 60
+#define P_HEIGHT 28
+#define MOVE_SPD 5
+#define ROTATE_SPD 3
 
 enum WorldCube { AIR, WALL };
 const enum WorldCube world[WORLD_HEIGHT][WORLD_WIDTH] = {
   {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL},
   {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
   {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
-  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
+  {WALL, WALL, WALL, WALL,  AIR,  AIR, WALL, WALL, WALL,  AIR, WALL, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL,  AIR, WALL, WALL},
+  {WALL, WALL, WALL,  AIR,  AIR,  AIR,  AIR, WALL,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL,  AIR,  AIR,  AIR, WALL},
   {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL}
 };
 
@@ -160,16 +162,29 @@ void drawProjection(char projection[SCR_HEIGHT][SCR_WIDTH], int px, int py, doub
 
 void gameLoop(int px, int py, double p_angle) {
   char projection[SCR_HEIGHT][SCR_WIDTH];
-  while (1) {
-    px += 5;
+  int last_px = px;
+  int last_py = py;
+  while (!(GetKeyState(VK_ESCAPE) & (1 << 7))) {
+    px += GetKeyState(VK_UP) & (1 << 7) ? cos(degToRad(p_angle)) * MOVE_SPD : 0;
+    px -= GetKeyState(VK_DOWN) & (1 << 7) ? cos(degToRad(p_angle)) * MOVE_SPD : 0;
+    py -= GetKeyState(VK_UP) & (1 << 7) ? sin(degToRad(p_angle)) * MOVE_SPD : 0;
+    py += GetKeyState(VK_DOWN) & (1 << 7) ? sin(degToRad(p_angle)) * MOVE_SPD : 0;
+    if (world[py/CUBE_SIZE][px/CUBE_SIZE] == WALL) {
+      px = last_px;
+      py = last_py;
+    }
+    last_px = px;
+    last_py = py;
+    p_angle += GetKeyState(VK_LEFT) & (1 << 7) ? ROTATE_SPD : 0;
+    p_angle -= GetKeyState(VK_RIGHT) & (1 << 7) ? ROTATE_SPD : 0;
     clearProjection(projection);
     drawProjection(projection, px, py, p_angle);
     displayProjection(projection);
-    Sleep(1000/60);
+    Sleep(1000/300);
   }
 }
 
 int main() {
-  gameLoop(50, 200, 0);
+  gameLoop(128, 128, 0);
   return 0;
 }
