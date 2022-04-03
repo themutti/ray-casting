@@ -1,9 +1,17 @@
-// Made following this guide: https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/
+/* 
+  Made following this guide:
+  https://permadi.com/1996/05/ray-casting-tutorial-table-of-contents/
+  and this video:
+  https://www.youtube.com/watch?v=94YOd0gimF8/
+*/
 
 #define _USE_MATH_DEFINES
 
-#include <stdio.h>
+#include <stdio.h>  // TODO remove
 #include <math.h>
+#include <string.h>
+#include <windows.h>
+#include <unistd.h>
 
 #define SCR_WIDTH 120
 #define SCR_HEIGHT 48
@@ -11,24 +19,24 @@
 #define WORLD_HEIGHT 12
 #define CUBE_SIZE 64
 #define FOV 60
-#define P_HEIGHT 30
+#define P_HEIGHT 28
 #define WALL_CHAR '#'
 #define FLOOR_CHAR '\''
 #define CEILING_CHAR '-'
 
-enum WorldCube { VOID, WALL };
+enum WorldCube { AIR, WALL };
 const enum WorldCube world[WORLD_HEIGHT][WORLD_WIDTH] = {
   {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, WALL, WALL, WALL, WALL, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
-  {WALL, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, VOID, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR, WALL, WALL, WALL, WALL,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
+  {WALL,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR,  AIR, WALL},
   {WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL, WALL}
 };
 
@@ -105,56 +113,63 @@ double rayCast(int x, int y, double angle) {
   return hor_distance < ver_distance ? hor_distance : ver_distance;
 }
 
-void clearProjection(char projection[SCR_WIDTH*SCR_HEIGHT+1]) {
-  for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
-    projection[i] = ' ';
-  }
-}
-
-void displayProjection(const char projection[SCR_WIDTH*SCR_HEIGHT+1]) {
-  for (int i = 0; i < SCR_WIDTH*SCR_HEIGHT; i++) {
-    putchar(projection[i]);
-    if ((i+1) % SCR_WIDTH == 0) {
-      putchar('\n');
+void clearProjection(char projection[SCR_HEIGHT][SCR_WIDTH]) {
+  for (int y = 0; y < SCR_HEIGHT; y++) {
+    for (int x = 0; x < SCR_WIDTH; x++) {
+      projection[y][x] = ' ';
     }
   }
 }
 
-void draw(char projection[SCR_WIDTH*SCR_HEIGHT+1], int px, int py, double p_angle) {
+void displayProjection(const char projection[SCR_HEIGHT][SCR_WIDTH]) {
+  HANDLE buffer = GetStdHandle(STD_OUTPUT_HANDLE);
+  COORD c = {0, 0};
+  SetConsoleCursorPosition(buffer, c);
+  DWORD written;
+  for (int i = 0; i < SCR_HEIGHT; i++) {
+    WriteConsole(buffer, projection[i], SCR_WIDTH, &written, NULL);
+    WriteConsole(buffer, "\n", 1, &written, NULL);
+  }
+}
+
+void drawProjection(char projection[SCR_HEIGHT][SCR_WIDTH], int px, int py, double p_angle) {
   double dist_to_projection = (SCR_WIDTH/2) / tan(degToRad(FOV/2));
   double ray_angle_add = (double)FOV / (double)SCR_WIDTH;
   double ray_angle = p_angle - FOV/2;
   for (int x = SCR_WIDTH-1; x >= 0; x--) {
     double distance = rayCast(px, py, ray_angle) * cos(degToRad(ray_angle - p_angle));
     int height = round(CUBE_SIZE * dist_to_projection / distance);
-    if (height > SCR_HEIGHT) {
-      height = SCR_HEIGHT;
-    }
     for (int i = 0; i < SCR_HEIGHT/2; i++) {
       int wall_center_y = SCR_HEIGHT / ((double)CUBE_SIZE / (double)P_HEIGHT);
-      int i_top = SCR_WIDTH*(wall_center_y - i - 1) + x;  // top half projection index
-      int i_bottom = SCR_WIDTH*(wall_center_y + i) + x;  // bottom half projection index
-      if (i_top >= 0) {
-        projection[i_top] = i < height/2 ? WALL_CHAR : CEILING_CHAR;
+      int top_y = wall_center_y - i - 1;  // top half projection index
+      int bottom_y = wall_center_y + i;  // bottom half projection index
+      if (top_y >= 0) {
+        projection[top_y][x] = i < height/2 ? WALL_CHAR : CEILING_CHAR;
       } else {
-        projection[i_top + SCR_HEIGHT*SCR_WIDTH] = FLOOR_CHAR;
+        projection[top_y+SCR_HEIGHT][x] = (top_y+SCR_HEIGHT)-wall_center_y < height/2 ? WALL_CHAR : FLOOR_CHAR;
       }
-      if (i_bottom < SCR_HEIGHT*SCR_WIDTH) {
-        projection[i_bottom] = i < height/2 ? WALL_CHAR : FLOOR_CHAR;
+      if (bottom_y < SCR_HEIGHT) {
+        projection[bottom_y][x] = i < height/2 ? WALL_CHAR : FLOOR_CHAR;
       } else {
-        projection[i_bottom - SCR_HEIGHT*SCR_WIDTH] = CEILING_CHAR;
+        projection[bottom_y-SCR_HEIGHT][x] = (bottom_y-SCR_HEIGHT)+wall_center_y < height/2 ? WALL_CHAR : CEILING_CHAR;
       }
     }
     ray_angle = fixAngleRange(ray_angle + ray_angle_add);
   }
 }
 
+void gameLoop(int px, int py, double p_angle) {
+  char projection[SCR_HEIGHT][SCR_WIDTH];
+  while (1) {
+    px += 5;
+    clearProjection(projection);
+    drawProjection(projection, px, py, p_angle);
+    displayProjection(projection);
+    Sleep(1000/60);
+  }
+}
+
 int main() {
-  int px = 150, py = 350;
-  double p_angle = 30;
-  char projection[SCR_WIDTH*SCR_HEIGHT+1];
-  clearProjection(projection);
-  draw(projection, px, py, p_angle);
-  displayProjection(projection);
+  gameLoop(50, 200, 0);
   return 0;
 }
